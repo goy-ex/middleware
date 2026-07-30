@@ -14,6 +14,8 @@ func Recoverer(loggerFunc LoggerFunc) func(http.Handler) http.Handler {
 				}
 
 				logger.Error("panic")
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("Internal Server Error"))
 			}()
 
 			next.ServeHTTP(w, r)
