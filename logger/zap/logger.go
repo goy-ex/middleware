@@ -12,6 +12,11 @@ type wrappedResponseWriter struct {
 	StatusCode int
 }
 
+func (w *wrappedResponseWriter) WriteHeader(statusCode int) {
+	w.StatusCode = statusCode
+	w.ResponseWriter.WriteHeader(statusCode)
+}
+
 func ReqLogger(buildRequestLogger func(r *http.Request) *zap.Logger, skipPatterns ...string) func(http.Handler) http.Handler {
 	skip := make(map[string]struct{}, len(skipPatterns))
 	for _, s := range skipPatterns {
@@ -29,18 +34,18 @@ func ReqLogger(buildRequestLogger func(r *http.Request) *zap.Logger, skipPattern
 
 			logger := buildRequestLogger(r)
 
+			r = r.WithContext(addReqLogger(r.Context(), logger))
+			ww := &wrappedResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
+			start := time.Now()
+
 			defer func() {
 				rec := recover()
 				if rec == nil {
 					return
 				}
-				logger.Error("panic", zap.Any("value", rec))
+				logger.Error("panic", zap.Any("value", rec), zap.Duration("duration", time.Since(start)))
 				panic(rec)
 			}()
-
-			r = r.WithContext(addReqLogger(r.Context(), logger))
-			ww := wrappedResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
-			start := time.Now()
 
 			next.ServeHTTP(ww, r)
 			logger.Info("request",
