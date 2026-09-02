@@ -2,6 +2,7 @@ package zap
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -17,22 +18,22 @@ func (w *wrappedResponseWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
-func ReqLogger(buildRequestLogger func(r *http.Request) *zap.Logger, skipPatterns ...string) func(http.Handler) http.Handler {
+func ReqLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPatterns ...string) func(http.Handler) http.Handler {
 	skip := make(map[string]struct{}, len(skipPatterns))
 	for _, s := range skipPatterns {
-		skip[s] = struct{}{}
+		skip[strings.TrimLeft(s, "/")] = struct{}{}
 	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, ok := skip[r.URL.Path]
+			_, ok := skip[strings.TrimLeft(r.URL.Path, "/")]
 			if ok {
 				next.ServeHTTP(w, r)
 
 				return
 			}
 
-			logger := buildRequestLogger(r)
+			logger := buildReqLogger(r)
 
 			r = r.WithContext(addReqLogger(r.Context(), logger))
 			ww := &wrappedResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
