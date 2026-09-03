@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	ctxzap "github.com/goy-ex/middleware/logger/zap/context"
 	"go.uber.org/zap"
 )
 
@@ -35,7 +36,7 @@ func ReqLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPatterns ..
 
 			logger := buildReqLogger(r)
 
-			r = r.WithContext(addReqLogger(r.Context(), logger))
+			r = r.WithContext(ctxzap.WithLogger(r.Context(), logger))
 			ww := &wrappedResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
 			start := time.Now()
 
