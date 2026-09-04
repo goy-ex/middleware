@@ -19,7 +19,7 @@ func (w *wrappedResponseWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
-func ReqLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPatterns ...string) func(http.Handler) http.Handler {
+func RequestLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPatterns ...string) func(http.Handler) http.Handler {
 	skip := make(map[string]struct{}, len(skipPatterns))
 	for _, s := range skipPatterns {
 		skip[strings.TrimLeft(s, "/")] = struct{}{}
@@ -35,6 +35,7 @@ func ReqLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPatterns ..
 			}
 
 			logger := buildReqLogger(r)
+			logger.Info("request received")
 
 			r = r.WithContext(ctxzap.WithLogger(r.Context(), logger))
 			ww := &wrappedResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
@@ -50,7 +51,7 @@ func ReqLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPatterns ..
 			}()
 
 			next.ServeHTTP(ww, r)
-			logger.Info("request",
+			logger.Info("request processed",
 				zap.Int("status", ww.StatusCode),
 				zap.Duration("duration", time.Since(start)),
 			)
