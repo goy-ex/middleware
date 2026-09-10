@@ -24,3 +24,7 @@ func RequestID(genFn func() string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+func RequestIDFrom(ctx context.Context) string {
+	return ctx.Value(requestIDKey).(string)
+}
