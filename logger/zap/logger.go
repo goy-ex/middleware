@@ -46,12 +46,15 @@ func RequestLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPattern
 			start := time.Now()
 
 			defer func() {
-				rec := recover()
-				if rec == nil {
-					return
+				if rec := recover(); rec != nil {
+					logger.Error(
+						"panic",
+						zap.Any("value", rec),
+						zap.Int("status", http.StatusInternalServerError),
+						zap.Duration("duration", time.Since(start)),
+					)
+					panic(rec)
 				}
-				logger.Error("panic", zap.Any("value", rec), zap.Int("status", ww.StatusCode), zap.Duration("duration", time.Since(start)))
-				panic(rec)
 			}()
 
 			next.ServeHTTP(ww, r)
