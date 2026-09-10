@@ -1,4 +1,4 @@
-module github.com/goy-ex/middleware
+module github.com/goy-ex/middleware/v2
 
 go 1.26.4
 
