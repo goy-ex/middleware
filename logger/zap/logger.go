@@ -1,11 +1,11 @@
 package zap
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
 
-	ctxzap "github.com/goy-ex/middleware/logger/zap/context"
 	"go.uber.org/zap"
 )
 
@@ -18,6 +18,10 @@ func (w *wrappedResponseWriter) WriteHeader(statusCode int) {
 	w.StatusCode = statusCode
 	w.ResponseWriter.WriteHeader(statusCode)
 }
+
+type loggerKeyType int
+
+const loggerKey loggerKeyType = iota
 
 func RequestLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPatterns ...string) func(http.Handler) http.Handler {
 	skip := make(map[string]struct{}, len(skipPatterns))
@@ -37,7 +41,7 @@ func RequestLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPattern
 			logger := buildReqLogger(r)
 			logger.Info("request received")
 
-			r = r.WithContext(ctxzap.WithLogger(r.Context(), logger))
+			r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))
 			ww := &wrappedResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
 			start := time.Now()
 
@@ -46,7 +50,7 @@ func RequestLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPattern
 				if rec == nil {
 					return
 				}
-				logger.Error("panic", zap.Any("value", rec), zap.Duration("duration", time.Since(start)))
+				logger.Error("panic", zap.Any("value", rec), zap.Int("status", ww.StatusCode), zap.Duration("duration", time.Since(start)))
 				panic(rec)
 			}()
 
@@ -57,4 +61,9 @@ func RequestLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPattern
 			)
 		})
 	}
+}
+
+func LoggerFrom(ctx context.Context) (*zap.Logger, bool) {
+	logger, ok := ctx.Value(loggerKey).(*zap.Logger)
+	return logger, ok
 }
