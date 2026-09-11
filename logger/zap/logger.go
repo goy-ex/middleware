@@ -49,7 +49,7 @@ func RequestLogger(buildReqLogger func(r *http.Request) *zap.Logger, skipPattern
 				if rec := recover(); rec != nil {
 					logger.Error(
 						"panic",
-						zap.Any("value", rec),
+						zap.Any("error", rec),
 						zap.Int("status", http.StatusInternalServerError),
 						zap.Duration("duration", time.Since(start)),
 					)

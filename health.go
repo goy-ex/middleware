@@ -1,12 +1,17 @@
 package middleware
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
-func Health(pattern string) func(http.Handler) http.Handler {
+func Health(path string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Pattern == pattern && r.Method == http.MethodGet {
+			if strings.TrimLeft(r.URL.Path, "/") == strings.TrimLeft(path, "/") {
 				w.WriteHeader(http.StatusOK)
+
+				return
 			}
 
 			next.ServeHTTP(w, r)
